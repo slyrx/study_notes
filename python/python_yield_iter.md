@@ -1,0 +1,106 @@
+---
+title: yield和iter的关系
+---
+
+iter定义
+========
+
+内建函数iter()可以生成一个iterator迭代器。
+
+-   优点
+
+    相比list来说，iterator不需要很大的内存空间。
+
+    使用迭代器解决了空间占用的问题，不过代码也太繁琐了，一点没有python风格。
+
+-   操作
+
+    迭代器通过next()来遍历元素，并且完成遍历时抛出*StopIteration()*异常。
+
+<!-- -->
+
+        it = iter(range(5))
+        print it.next()         # 0
+        print it.next()         # 1
+        print it.next()         # 2
+        print it.next()         # 3
+        print it.next()         # 4
+
+        print it.next()         # StopIteration()
+
+用for循环对迭代器进行遍历
+
+        it = iter(range(5))
+        for i in it:
+            print i
+
+        print it.next()         # StopIteration()
+
+遍历完成时，调用it.next()，抛出StopIteration()异常。可以看出for循环调用的是next()方法。就像下边这样。
+
+        while True:
+        try:
+            print it.next()
+        except StopIteration:
+            break    
+
+yield定义
+=========
+
+yield是为了应对iter代码太复杂的简化方案，是一个可迭代的并且简洁的方案。
+
+-   特点：
+
+    使用next()方法会依次返回元素，并且越界时报StopIteration异常。
+
+<!-- -->
+
+    def myEnumerate(seq, start=0):
+        n = start
+        for i in seq:
+            yield n, i
+            n += 1
+
+    it = myEnumerate(range(5))
+    print it.next()         # (0, 0)
+    print it.next()         # (1, 1)
+    print it.next()         # (2, 2)
+    print it.next()         # (3, 3)
+    print it.next()         # (4, 4)
+    print it.next()         # StopIteration    
+
+我的理解，yield并没有简化原来写在next里面的代码，而是告诉了next函数在执行的时候，上次存储的位置在哪里，需要从什么地方开始。
+
+        def next(self):
+            if self.n == len(self.seq):
+                raise StopIteration()
+            item = self.seq[self.n]
+            index = self.start
+            self.n += 1
+            self.start += 1
+            return index, item    
+
+另外，因为生成器只能被迭代一次。不可以再次使用 for i in mygenerator
+。对比普通的\[\]数组，则会一直保留着这个变量，占用内存空间。
+
+    第一遍，会输出0,1,4
+    >>> mygenerator = (x*x for x in range(3))
+    >>> for i in mygenerator :
+    ...    print(i)
+    0
+    1
+    4
+    第二遍，什么也不会输出
+    >>> mygenerator = (x*x for x in range(3))
+    >>> for i in mygenerator :
+    ...    print(i)
+
+每次在yield处都要确认是不是这次调用的结尾了，
+
+-   如果是结尾，就执行后续的内容。
+
+-   如果不是结尾，就再次执行yield以前的内容。
+
+yield只执行一次，能重复调用是因为再函数内有循环来调用yield。
+
+yield就像一个断点，当调用一次对应的函数时，执行到这个断点处，并保存一个快照，当再次调用这个函数时，则从断点的位置开始向后执行。
